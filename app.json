@@ -19,9 +19,6 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.cablepull.tracker"
-    },
-    "plugins": [
-      "expo-print"
-    ]
+    }
   }
 }
