@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, Switch,
-  ScrollView, Alert, StyleSheet,
+  Alert, StyleSheet,
 } from 'react-native';
 import { COLORS, STATUS_FIELDS } from '../theme';
 import { completionCount, progressColor } from '../utils';
@@ -22,7 +22,7 @@ function Badge({ done, short, onPress }) {
   );
 }
 
-// ─── StatusToggle (inside expanded panel) ────────────────────────────────────
+// ─── StatusToggle ─────────────────────────────────────────────────────────────
 function StatusToggle({ label, value, onChange, color }) {
   return (
     <TouchableOpacity
@@ -39,9 +39,25 @@ function StatusToggle({ label, value, onChange, color }) {
 // ─── DropCard ─────────────────────────────────────────────────────────────────
 export default function DropCard({ drop, onUpdate, onDelete, idfList }) {
   const [expanded, setExpanded] = useState(false);
-  const count    = completionCount(drop);
-  const pColor   = progressColor(drop);
+  const count      = completionCount(drop);
+  const pColor     = progressColor(drop);
   const isComplete = count === 3;
+
+  // Local text state — prevents re-renders from badge taps disrupting typing.
+  // We only call onUpdate (which triggers AsyncStorage save + full re-render)
+  // when the user leaves the field via onEndEditing, not on every keystroke.
+  const [localCableA, setLocalCableA] = useState(drop.cableA);
+  const [localCableB, setLocalCableB] = useState(drop.cableB);
+  const [localNotes,  setLocalNotes]  = useState(drop.notes);
+
+  // Keep local state in sync if drop changes from outside (e.g. bulk import)
+  useEffect(() => { setLocalCableA(drop.cableA); }, [drop.cableA]);
+  useEffect(() => { setLocalCableB(drop.cableB); }, [drop.cableB]);
+  useEffect(() => { setLocalNotes(drop.notes);   }, [drop.notes]);
+
+  const commitCableA = () => { if (localCableA !== drop.cableA) onUpdate({ ...drop, cableA: localCableA }); };
+  const commitCableB = () => { if (localCableB !== drop.cableB) onUpdate({ ...drop, cableB: localCableB }); };
+  const commitNotes  = () => { if (localNotes  !== drop.notes)  onUpdate({ ...drop, notes:  localNotes  }); };
 
   const handleDelete = () => {
     Alert.alert(
@@ -54,7 +70,6 @@ export default function DropCard({ drop, onUpdate, onDelete, idfList }) {
     );
   };
 
-  // Toggle a status field directly from the collapsed badge
   const toggleField = (fieldKey) => {
     onUpdate({ ...drop, [fieldKey]: !drop[fieldKey] });
   };
@@ -69,7 +84,6 @@ export default function DropCard({ drop, onUpdate, onDelete, idfList }) {
         style={s.header}
       >
         <View style={{ flex: 1, gap: 6 }}>
-          {/* Cable IDs row */}
           <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
             {drop.isDouble && (
               <View style={s.doublePill}>
@@ -99,17 +113,12 @@ export default function DropCard({ drop, onUpdate, onDelete, idfList }) {
                 key={f.key}
                 done={drop[f.key]}
                 short={f.short}
-                onPress={(e) => {
-                  // Prevent the card expand/collapse from firing
-                  e?.stopPropagation?.();
-                  toggleField(f.key);
-                }}
+                onPress={() => toggleField(f.key)}
               />
             ))}
           </View>
         </View>
 
-        {/* Progress ring + chevron */}
         <View style={{ alignItems: 'center', gap: 4, marginLeft: 8 }}>
           <View style={[s.ring, { borderColor: pColor }]}>
             <Text style={[s.ringText, { color: pColor }]}>{count}/3</Text>
@@ -133,13 +142,15 @@ export default function DropCard({ drop, onUpdate, onDelete, idfList }) {
             />
           </View>
 
-          {/* Cable IDs */}
+          {/* Cable IDs — local state, commits on blur */}
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <View style={{ flex: 1 }}>
               <Text style={s.fieldLabel}>CABLE ID {drop.isDouble ? 'A' : ''}</Text>
               <TextInput
-                value={drop.cableA}
-                onChangeText={t => onUpdate({ ...drop, cableA: t })}
+                value={localCableA}
+                onChangeText={setLocalCableA}
+                onEndEditing={commitCableA}
+                onBlur={commitCableA}
                 placeholder="e.g. C-001"
                 placeholderTextColor={COLORS.textDim}
                 style={s.input}
@@ -150,8 +161,10 @@ export default function DropCard({ drop, onUpdate, onDelete, idfList }) {
               <View style={{ flex: 1 }}>
                 <Text style={s.fieldLabel}>CABLE ID B</Text>
                 <TextInput
-                  value={drop.cableB}
-                  onChangeText={t => onUpdate({ ...drop, cableB: t })}
+                  value={localCableB}
+                  onChangeText={setLocalCableB}
+                  onEndEditing={commitCableB}
+                  onBlur={commitCableB}
                   placeholder="e.g. C-002"
                   placeholderTextColor={COLORS.textDim}
                   style={s.input}
@@ -193,12 +206,14 @@ export default function DropCard({ drop, onUpdate, onDelete, idfList }) {
             </View>
           </View>
 
-          {/* Notes */}
+          {/* Notes — local state, commits on blur */}
           <View>
             <Text style={s.fieldLabel}>NOTES</Text>
             <TextInput
-              value={drop.notes}
-              onChangeText={t => onUpdate({ ...drop, notes: t })}
+              value={localNotes}
+              onChangeText={setLocalNotes}
+              onEndEditing={commitNotes}
+              onBlur={commitNotes}
               placeholder="Field notes, issues, location..."
               placeholderTextColor={COLORS.textDim}
               style={[s.input, { minHeight: 70, textAlignVertical: 'top' }]}
@@ -208,7 +223,6 @@ export default function DropCard({ drop, onUpdate, onDelete, idfList }) {
 
           <Text style={{ fontSize: 10, color: COLORS.textDim, textAlign: 'right' }}>Added {drop.createdAt}</Text>
 
-          {/* Delete */}
           <TouchableOpacity onPress={handleDelete} style={s.deleteBtn}>
             <Text style={s.deleteBtnText}>✕  DELETE DROP</Text>
           </TouchableOpacity>
