@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   FlatList, StyleSheet, ScrollView, KeyboardAvoidingView, Platform,
@@ -19,38 +19,66 @@ export default function DropsScreen({ drops, idfList, addDrop, bulkAddDrops, upd
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [search,       setSearch]       = useState('');
   const [showBulk,     setShowBulk]     = useState(false);
-  const [sortedDrops,  setSortedDrops]  = useState(() => drops);
 
-  // Keep sortedDrops in sync when drops change externally (bulk import, delete etc)
-  // but NOT when typing (the parent re-renders on every keystroke in old card mode)
+  // order = array of drop IDs controlling display sequence.
+  // Starts as the natural order of drops. Only changes when sort button pressed.
+  const [order, setOrder] = useState(() => drops.map(d => d.id));
+
+  // Keep order in sync as drops are added or deleted, without re-sorting
+  useEffect(() => {
+    setOrder(prev => {
+      const prevIds = new Set(prev);
+      const dropIds = new Set(drops.map(d => d.id));
+      // Remove deleted IDs, append any new IDs at the end
+      const kept    = prev.filter(id => dropIds.has(id));
+      const added   = drops.filter(d => !prevIds.has(d.id)).map(d => d.id);
+      return [...kept, ...added];
+    });
+  }, [drops]);
+
+  const extractNum = (str) => {
+    const m = String(str || '').match(/\d+/);
+    return m ? parseInt(m[0], 10) : 9999;
+  };
+
   const handleSort = useCallback(() => {
-    setSortedDrops([...drops].sort((a, b) => {
+    setOrder([...drops].sort((a, b) => {
       const idfA = a.idf ? a.idf.toLowerCase() : 'zzz';
       const idfB = b.idf ? b.idf.toLowerCase() : 'zzz';
       if (idfA < idfB) return -1;
       if (idfA > idfB) return 1;
-      const extractNum = (str) => { const m = String(str||'').match(/\d+/); return m ? parseInt(m[0],10) : 9999; };
-      return Math.min(extractNum(a.cableA), a.isDouble ? extractNum(a.cableB) : 9999)
-           - Math.min(extractNum(b.cableA), b.isDouble ? extractNum(b.cableB) : 9999);
-    }));
+      const keyA = Math.min(extractNum(a.cableA), a.isDouble ? extractNum(a.cableB) : 9999);
+      const keyB = Math.min(extractNum(b.cableA), b.isDouble ? extractNum(b.cableB) : 9999);
+      return keyA - keyB;
+    }).map(d => d.id));
   }, [drops]);
 
-  const filtered = useMemo(() => sortedDrops.filter(d => {
-    if (filterIdf !== 'ALL' && d.idf !== filterIdf) return false;
-    if (filterStatus === 'COMPLETE'   && !(d.roughPull && d.terminated && d.tested)) return false;
-    if (filterStatus === 'INCOMPLETE' &&  (d.roughPull && d.terminated && d.tested)) return false;
-    if (filterStatus === 'ROUGH_ONLY' && (!d.roughPull || d.terminated || d.tested)) return false;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      if (
-        !d.cableA.toLowerCase().includes(q) &&
-        !d.cableB.toLowerCase().includes(q) &&
-        !d.notes.toLowerCase().includes(q) &&
-        !d.idf.toLowerCase().includes(q)
-      ) return false;
-    }
-    return true;
-  }), [sortedDrops, filterIdf, filterStatus, search]);
+  // Build a lookup map for instant access, then apply order
+  const dropMap = useMemo(() => {
+    const map = {};
+    drops.forEach(d => { map[d.id] = d; });
+    return map;
+  }, [drops]);
+
+  const filtered = useMemo(() => order
+    .filter(id => dropMap[id])
+    .map(id => dropMap[id])
+    .filter(d => {
+      if (filterIdf !== 'ALL' && d.idf !== filterIdf) return false;
+      if (filterStatus === 'COMPLETE'   && !(d.roughPull && d.terminated && d.tested)) return false;
+      if (filterStatus === 'INCOMPLETE' &&  (d.roughPull && d.terminated && d.tested)) return false;
+      if (filterStatus === 'ROUGH_ONLY' && (!d.roughPull || d.terminated || d.tested)) return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        if (
+          !d.cableA.toLowerCase().includes(q) &&
+          !d.cableB.toLowerCase().includes(q) &&
+          !d.notes.toLowerCase().includes(q) &&
+          !d.idf.toLowerCase().includes(q)
+        ) return false;
+      }
+      return true;
+    }), [order, dropMap, filterIdf, filterStatus, search]);
 
   return (
     <KeyboardAvoidingView
