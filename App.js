@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, SafeAreaView, StyleSheet } from 'react-native';
+import { View, SafeAreaView, StyleSheet, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -100,7 +100,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.root}>
-      <StatusBar style="light" backgroundColor="#161b22" />
+      <StatusBar style="light" backgroundColor="#161b22" translucent={false} />
       <View style={{ flex: 1 }}>
         {activeTab === 'drops'     && <DropsScreen     {...screenProps} />}
         {activeTab === 'dashboard' && <DashboardScreen {...screenProps} />}

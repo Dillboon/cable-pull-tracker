@@ -33,6 +33,10 @@ export default function DropsScreen({ drops, idfList, addDrop, updateDrop, delet
       ) return false;
     }
     return true;
+  }).sort((a, b) => {
+    const numA = parseInt(a.cableA) || 0;
+    const numB = parseInt(b.cableA) || 0;
+    return numA - numB;
   }), [drops, filterIdf, filterStatus, search]);
 
   return (
