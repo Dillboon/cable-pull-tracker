@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   FlatList, StyleSheet, ScrollView,
@@ -15,34 +15,54 @@ const STATUS_FILTERS = [
   { key: 'ROUGH_ONLY', label: 'Pulled Only' },
 ];
 
+const sortDrops = (arr) => [...arr].sort((a, b) => {
+  const idfA = (a.idf || '').toLowerCase();
+  const idfB = (b.idf || '').toLowerCase();
+  if (idfA < idfB) return -1;
+  if (idfA > idfB) return 1;
+  return (parseInt(a.cableA) || 0) - (parseInt(b.cableA) || 0);
+});
+
 export default function DropsScreen({ drops, idfList, addDrop, bulkAddDrops, updateDrop, deleteDrop }) {
   const [filterIdf,    setFilterIdf]    = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [search,       setSearch]       = useState('');
   const [showBulk,     setShowBulk]     = useState(false);
 
-  const filtered = useMemo(() => drops.filter(d => {
-    if (filterIdf !== 'ALL' && d.idf !== filterIdf) return false;
-    if (filterStatus === 'COMPLETE'   && !(d.roughPull && d.terminated && d.tested)) return false;
-    if (filterStatus === 'INCOMPLETE' &&  (d.roughPull && d.terminated && d.tested)) return false;
-    if (filterStatus === 'ROUGH_ONLY' && (!d.roughPull || d.terminated || d.tested)) return false;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      if (
-        !d.cableA.toLowerCase().includes(q) &&
-        !d.cableB.toLowerCase().includes(q) &&
-        !d.notes.toLowerCase().includes(q) &&
-        !d.idf.toLowerCase().includes(q)
-      ) return false;
-    }
-    return true;
-  }).sort((a, b) => {
-    const idfA = (a.idf || '').toLowerCase();
-    const idfB = (b.idf || '').toLowerCase();
-    if (idfA < idfB) return -1;
-    if (idfA > idfB) return 1;
-    return (parseInt(a.cableA) || 0) - (parseInt(b.cableA) || 0);
-  }), [drops, filterIdf, filterStatus, search]);
+  // ── Debounced display drops ───────────────────────────────────────────────
+  // displayDrops only updates 1.5s after the last change to `drops`.
+  // This means cards won't jump/re-sort while the user is actively typing.
+  // Badge taps and other non-typing changes still sort after the short delay.
+  const [displayDrops, setDisplayDrops] = useState(() => drops);
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDisplayDrops(drops);
+    }, 1500);
+    return () => clearTimeout(debounceRef.current);
+  }, [drops]);
+
+  // ── Filter + sort ─────────────────────────────────────────────────────────
+  const filtered = useMemo(() => sortDrops(
+    displayDrops.filter(d => {
+      if (filterIdf !== 'ALL' && d.idf !== filterIdf) return false;
+      if (filterStatus === 'COMPLETE'   && !(d.roughPull && d.terminated && d.tested)) return false;
+      if (filterStatus === 'INCOMPLETE' &&  (d.roughPull && d.terminated && d.tested)) return false;
+      if (filterStatus === 'ROUGH_ONLY' && (!d.roughPull || d.terminated || d.tested)) return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        if (
+          !d.cableA.toLowerCase().includes(q) &&
+          !d.cableB.toLowerCase().includes(q) &&
+          !d.notes.toLowerCase().includes(q) &&
+          !d.idf.toLowerCase().includes(q)
+        ) return false;
+      }
+      return true;
+    })
+  ), [displayDrops, filterIdf, filterStatus, search]);
 
   return (
     <KeyboardAvoidingView
@@ -157,6 +177,6 @@ const s = StyleSheet.create({
   fabBtn:    { flex: 1, paddingVertical: 13, borderRadius: 10, alignItems: 'center' },
   fabBlue:   { backgroundColor: '#1d4ed8', elevation: 6 },
   fabPurple: { backgroundColor: '#5b21b6', elevation: 6 },
-  fabGreen:  { backgroundColor: '#166534', elevation: 6 },
+  fabGreen:  { backgroundColor: '#166834', elevation: 6 },
   fabText:   { color: '#fff', fontWeight: '800', fontSize: 12, letterSpacing: 0.4 },
 });
