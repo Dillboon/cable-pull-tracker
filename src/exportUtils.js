@@ -3,13 +3,21 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import * as XLSX from 'xlsx';
 
+// ─── Sort drops numerically by first cable ID ────────────────────────────────
+const sortedDrops = (drops) => [...drops].sort((a, b) => {
+  const numA = parseInt(a.cableA) || 0;
+  const numB = parseInt(b.cableA) || 0;
+  return numA - numB;
+});
+
 // ─── PDF Export ──────────────────────────────────────────────────────────────
 export async function exportPDF(drops) {
-  const rp = drops.filter(d => d.roughPull).length;
-  const tm = drops.filter(d => d.terminated).length;
-  const ts = drops.filter(d => d.tested).length;
+  const sorted = sortedDrops(drops);
+  const rp = sorted.filter(d => d.roughPull).length;
+  const tm = sorted.filter(d => d.terminated).length;
+  const ts = sorted.filter(d => d.tested).length;
 
-  const rows = drops.map((d, i) => {
+  const rows = sorted.map((d, i) => {
     const bg = i % 2 === 0 ? '#f8fafc' : '#ffffff';
     const cable = d.isDouble ? `${d.cableA || '—'} / ${d.cableB || '—'}` : (d.cableA || '—');
     const tick = (v) => v
@@ -17,8 +25,8 @@ export async function exportPDF(drops) {
       : `<span style="color:#dc2626;">✗</span>`;
     return `
       <tr style="background:${bg}">
-        <td>${cable}</td>
         <td>${d.idf || '—'}</td>
+        <td>${cable}</td>
         <td>${d.isDouble ? '<b style="color:#7c3aed;">Double</b>' : 'Single'}</td>
         <td style="text-align:center">${tick(d.roughPull)}</td>
         <td style="text-align:center">${tick(d.terminated)}</td>
@@ -52,22 +60,22 @@ export async function exportPDF(drops) {
       <h1>🔌 CablePull Field Tracker — Report</h1>
       <div class="meta">Generated: ${new Date().toLocaleString()}</div>
       <div class="summary">
-        <div class="stat"><b>${drops.length}</b><span>Total Drops</span></div>
-        <div class="stat"><b style="color:#d97706">${rp}/${drops.length}</b><span>Rough Pulled</span></div>
-        <div class="stat"><b style="color:#2563eb">${tm}/${drops.length}</b><span>Terminated</span></div>
-        <div class="stat"><b style="color:#16a34a">${ts}/${drops.length}</b><span>Tested</span></div>
+        <div class="stat"><b>${sorted.length}</b><span>Total Drops</span></div>
+        <div class="stat"><b style="color:#d97706">${rp}/${sorted.length}</b><span>Rough Pulled</span></div>
+        <div class="stat"><b style="color:#2563eb">${tm}/${sorted.length}</b><span>Terminated</span></div>
+        <div class="stat"><b style="color:#16a34a">${ts}/${sorted.length}</b><span>Tested</span></div>
       </div>
       <table>
         <thead>
           <tr>
-            <th>Cable ID(s)</th><th>IDF</th><th>Type</th>
+            <th>IDF</th><th>Cable ID(s)</th><th>Type</th>
             <th>Rough Pull</th><th>Terminated</th><th>Tested</th>
             <th>Notes</th><th>Date</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
-      <div class="footer">CablePull Tracker • ${drops.length} total drops</div>
+      <div class="footer">CablePull Tracker • ${sorted.length} total drops</div>
     </body>
     </html>`;
 
@@ -81,9 +89,11 @@ export async function exportPDF(drops) {
 
 // ─── Excel Export ─────────────────────────────────────────────────────────────
 export async function exportXLSX(drops) {
-  const data = drops.map(d => ({
-    'Cable ID(s)':  d.isDouble ? `${d.cableA} / ${d.cableB}` : d.cableA,
+  const sorted = sortedDrops(drops);
+
+  const data = sorted.map(d => ({
     'IDF':          d.idf || '',
+    'Cable ID(s)':  d.isDouble ? `${d.cableA} / ${d.cableB}` : d.cableA,
     'Type':         d.isDouble ? 'Double' : 'Single',
     'Rough Pull':   d.roughPull  ? 'Yes' : 'No',
     'Terminated':   d.terminated ? 'Yes' : 'No',
@@ -92,26 +102,22 @@ export async function exportXLSX(drops) {
     'Date Added':   d.createdAt,
   }));
 
-  const ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [22, 10, 9, 12, 13, 9, 40, 13].map(w => ({ wch: w }));
-
-  // Bold header row styling
-  const headerKeys = ['A1','B1','C1','D1','E1','F1','G1','H1'];
-  headerKeys.forEach(k => {
-    if (ws[k]) ws[k].s = { font: { bold: true }, fill: { fgColor: { rgb: '0F172A' } } };
+  const ws = XLSX.utils.json_to_sheet(data, {
+    header: ['IDF', 'Cable ID(s)', 'Type', 'Rough Pull', 'Terminated', 'Tested', 'Notes', 'Date Added']
   });
+  ws['!cols'] = [10, 22, 9, 12, 13, 9, 40, 13].map(w => ({ wch: w }));
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Cable Drops');
 
   // Summary sheet
   const summaryData = [
-    { 'Metric': 'Total Drops',    'Count': drops.length },
-    { 'Metric': 'Double Drops',   'Count': drops.filter(d => d.isDouble).length },
-    { 'Metric': 'Rough Pulled',   'Count': drops.filter(d => d.roughPull).length },
-    { 'Metric': 'Terminated',     'Count': drops.filter(d => d.terminated).length },
-    { 'Metric': 'Tested',         'Count': drops.filter(d => d.tested).length },
-    { 'Metric': 'Fully Complete', 'Count': drops.filter(d => d.roughPull && d.terminated && d.tested).length },
+    { 'Metric': 'Total Drops',    'Count': sorted.length },
+    { 'Metric': 'Double Drops',   'Count': sorted.filter(d => d.isDouble).length },
+    { 'Metric': 'Rough Pulled',   'Count': sorted.filter(d => d.roughPull).length },
+    { 'Metric': 'Terminated',     'Count': sorted.filter(d => d.terminated).length },
+    { 'Metric': 'Tested',         'Count': sorted.filter(d => d.tested).length },
+    { 'Metric': 'Fully Complete', 'Count': sorted.filter(d => d.roughPull && d.terminated && d.tested).length },
     { 'Metric': 'Report Date',    'Count': new Date().toLocaleString() },
   ];
   const wsSummary = XLSX.utils.json_to_sheet(summaryData);
