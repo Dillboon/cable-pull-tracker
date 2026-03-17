@@ -11,7 +11,7 @@ const sortedDrops = (drops) => [...drops].sort((a, b) => {
 });
 
 // ─── PDF Export ──────────────────────────────────────────────────────────────
-export async function exportPDF(drops) {
+export async function exportPDF(drops, projectName = '') {
   const sorted = sortedDrops(drops);
   const rp = sorted.filter(d => d.roughPull).length;
   const tm = sorted.filter(d => d.terminated).length;
@@ -43,8 +43,10 @@ export async function exportPDF(drops) {
       <meta charset="UTF-8"/>
       <style>
         body { font-family: -apple-system, Arial, sans-serif; margin: 0; padding: 24px; background: #fff; color: #111; }
-        h1 { font-size: 22px; margin: 0 0 4px; color: #0f172a; }
-        .meta { font-size: 12px; color: #64748b; margin-bottom: 6px; }
+        .topbar { background: #0f172a; color: #fbbf24; padding: 14px 18px; border-radius: 8px; margin-bottom: 6px; }
+        .topbar h1 { margin: 0; font-size: 20px; }
+        .topbar .project { font-size: 13px; color: #94a3b8; margin-top: 3px; }
+        .meta { font-size: 11px; color: #64748b; margin-bottom: 10px; }
         .summary { display: flex; gap: 24px; background: #f1f5f9; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; }
         .stat { display: flex; flex-direction: column; }
         .stat b { font-size: 20px; color: #0f172a; }
@@ -57,7 +59,10 @@ export async function exportPDF(drops) {
       </style>
     </head>
     <body>
-      <h1>🔌 CablePull Field Tracker — Report</h1>
+      <div class="topbar">
+        <h1>🔌 CablePull Field Tracker</h1>
+        ${projectName ? `<div class="project">Project: ${projectName}</div>` : ''}
+      </div>
       <div class="meta">Generated: ${new Date().toLocaleString()}</div>
       <div class="summary">
         <div class="stat"><b>${sorted.length}</b><span>Total Drops</span></div>
@@ -75,7 +80,7 @@ export async function exportPDF(drops) {
         </thead>
         <tbody>${rows}</tbody>
       </table>
-      <div class="footer">CablePull Tracker • ${sorted.length} total drops</div>
+      <div class="footer">CablePull Tracker${projectName ? ` · ${projectName}` : ''} · ${sorted.length} total drops</div>
     </body>
     </html>`;
 
@@ -83,12 +88,12 @@ export async function exportPDF(drops) {
   await Sharing.shareAsync(uri, {
     UTI: '.pdf',
     mimeType: 'application/pdf',
-    dialogTitle: 'Share Cable Pull Report (PDF)',
+    dialogTitle: `Share ${projectName || 'Cable Pull'} Report (PDF)`,
   });
 }
 
 // ─── Excel Export ─────────────────────────────────────────────────────────────
-export async function exportXLSX(drops) {
+export async function exportXLSX(drops, projectName = '') {
   const sorted = sortedDrops(drops);
 
   const data = sorted.map(d => ({
@@ -110,28 +115,29 @@ export async function exportXLSX(drops) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Cable Drops');
 
-  // Summary sheet
   const summaryData = [
-    { 'Metric': 'Total Drops',    'Count': sorted.length },
-    { 'Metric': 'Double Drops',   'Count': sorted.filter(d => d.isDouble).length },
-    { 'Metric': 'Rough Pulled',   'Count': sorted.filter(d => d.roughPull).length },
-    { 'Metric': 'Terminated',     'Count': sorted.filter(d => d.terminated).length },
-    { 'Metric': 'Tested',         'Count': sorted.filter(d => d.tested).length },
-    { 'Metric': 'Fully Complete', 'Count': sorted.filter(d => d.roughPull && d.terminated && d.tested).length },
-    { 'Metric': 'Report Date',    'Count': new Date().toLocaleString() },
+    { 'Metric': 'Project',        'Value': projectName || '—' },
+    { 'Metric': 'Total Drops',    'Value': String(sorted.length) },
+    { 'Metric': 'Double Drops',   'Value': String(sorted.filter(d => d.isDouble).length) },
+    { 'Metric': 'Rough Pulled',   'Value': String(sorted.filter(d => d.roughPull).length) },
+    { 'Metric': 'Terminated',     'Value': String(sorted.filter(d => d.terminated).length) },
+    { 'Metric': 'Tested',         'Value': String(sorted.filter(d => d.tested).length) },
+    { 'Metric': 'Fully Complete', 'Value': String(sorted.filter(d => d.roughPull && d.terminated && d.tested).length) },
+    { 'Metric': 'Report Date',    'Value': new Date().toLocaleString() },
   ];
-  const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-  wsSummary['!cols'] = [{ wch: 20 }, { wch: 20 }];
+  const wsSummary = XLSX.utils.json_to_sheet(summaryData, { header: ['Metric', 'Value'] });
+  wsSummary['!cols'] = [{ wch: 20 }, { wch: 24 }];
   XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
 
-  const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-  const fileUri = FileSystem.cacheDirectory + 'cable-pull-tracker.xlsx';
+  const wbout  = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+  const safeName = (projectName || 'cable-pull').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  const fileUri  = FileSystem.cacheDirectory + `${safeName}-tracker.xlsx`;
   await FileSystem.writeAsStringAsync(fileUri, wbout, {
     encoding: FileSystem.EncodingType.Base64,
   });
   await Sharing.shareAsync(fileUri, {
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    dialogTitle: 'Share Cable Pull Report (Excel)',
+    dialogTitle: `Share ${projectName || 'Cable Pull'} Report (Excel)`,
     UTI: 'com.microsoft.excel.xlsx',
   });
 }
