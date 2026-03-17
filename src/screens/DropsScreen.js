@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   FlatList, StyleSheet, ScrollView,
-  KeyboardAvoidingView, Platform, Keyboard,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import DropCard from '../components/DropCard';
 import BulkImportModal from '../components/BulkImportModal';
@@ -15,62 +15,34 @@ const STATUS_FILTERS = [
   { key: 'ROUGH_ONLY', label: 'Pulled Only' },
 ];
 
-const sortDrops = (arr) => [...arr].sort((a, b) => {
-  const idfA = (a.idf || '').toLowerCase();
-  const idfB = (b.idf || '').toLowerCase();
-  if (idfA < idfB) return -1;
-  if (idfA > idfB) return 1;
-  return (parseInt(a.cableA) || 0) - (parseInt(b.cableA) || 0);
-});
-
 export default function DropsScreen({ drops, idfList, addDrop, bulkAddDrops, updateDrop, deleteDrop }) {
   const [filterIdf,    setFilterIdf]    = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [search,       setSearch]       = useState('');
   const [showBulk,     setShowBulk]     = useState(false);
 
-  // ── Keyboard-aware sort ───────────────────────────────────────────────────
-  // We keep a "committed" snapshot of drops that only re-sorts when the
-  // keyboard is not open. This prevents cards jumping while the user types.
-  const [keyboardOpen,    setKeyboardOpen]    = useState(false);
-  const [committedDrops,  setCommittedDrops]  = useState(() => drops);
-
-  useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardOpen(true));
-    const hide = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardOpen(false);
-      setCommittedDrops(drops); // re-sort only after keyboard closes
-    });
-    return () => { show.remove(); hide.remove(); };
-  }, [drops]);
-
-  // When keyboard is closed, keep committedDrops in sync with drops
-  // (handles updates from badge taps, which don't open the keyboard)
-  useEffect(() => {
-    if (!keyboardOpen) setCommittedDrops(drops);
-  }, [drops, keyboardOpen]);
-
-  // ── Filter + sort ─────────────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    const source = keyboardOpen ? committedDrops : drops;
-    const result = source.filter(d => {
-      if (filterIdf !== 'ALL' && d.idf !== filterIdf) return false;
-      if (filterStatus === 'COMPLETE'   && !(d.roughPull && d.terminated && d.tested)) return false;
-      if (filterStatus === 'INCOMPLETE' &&  (d.roughPull && d.terminated && d.tested)) return false;
-      if (filterStatus === 'ROUGH_ONLY' && (!d.roughPull || d.terminated || d.tested)) return false;
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        if (
-          !d.cableA.toLowerCase().includes(q) &&
-          !d.cableB.toLowerCase().includes(q) &&
-          !d.notes.toLowerCase().includes(q) &&
-          !d.idf.toLowerCase().includes(q)
-        ) return false;
-      }
-      return true;
-    });
-    return keyboardOpen ? result : sortDrops(result);
-  }, [drops, committedDrops, keyboardOpen, filterIdf, filterStatus, search]);
+  const filtered = useMemo(() => drops.filter(d => {
+    if (filterIdf !== 'ALL' && d.idf !== filterIdf) return false;
+    if (filterStatus === 'COMPLETE'   && !(d.roughPull && d.terminated && d.tested)) return false;
+    if (filterStatus === 'INCOMPLETE' &&  (d.roughPull && d.terminated && d.tested)) return false;
+    if (filterStatus === 'ROUGH_ONLY' && (!d.roughPull || d.terminated || d.tested)) return false;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      if (
+        !d.cableA.toLowerCase().includes(q) &&
+        !d.cableB.toLowerCase().includes(q) &&
+        !d.notes.toLowerCase().includes(q) &&
+        !d.idf.toLowerCase().includes(q)
+      ) return false;
+    }
+    return true;
+  }).sort((a, b) => {
+    const idfA = (a.idf || '').toLowerCase();
+    const idfB = (b.idf || '').toLowerCase();
+    if (idfA < idfB) return -1;
+    if (idfA > idfB) return 1;
+    return (parseInt(a.cableA) || 0) - (parseInt(b.cableA) || 0);
+  }), [drops, filterIdf, filterStatus, search]);
 
   return (
     <KeyboardAvoidingView
