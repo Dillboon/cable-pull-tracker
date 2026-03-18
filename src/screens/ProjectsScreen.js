@@ -13,7 +13,6 @@ const emptyProject = (name) => ({
   status:    'active',
   createdAt: today(),
   drops:     [],
-  prints:    [],
   idfList:   [...DEFAULT_IDFS],
 });
 

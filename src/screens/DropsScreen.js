@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   FlatList, StyleSheet, ScrollView,
@@ -44,23 +44,9 @@ export default function DropsScreen({ drops, idfList, addDrop, bulkAddDrops, upd
   const [search,       setSearch]       = useState('');
   const [showBulk,     setShowBulk]     = useState(false);
 
-  // ── Debounced display drops ───────────────────────────────────────────────
-  // Waits 1.5s after the last change before re-sorting, so cards don't
-  // jump around while the user is actively typing a cable ID.
-  const [displayDrops, setDisplayDrops] = useState(() => drops);
-  const debounceRef = useRef(null);
-
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setDisplayDrops(drops);
-    }, 1500);
-    return () => clearTimeout(debounceRef.current);
-  }, [drops]);
-
   // ── Filter + sort ─────────────────────────────────────────────────────────
   const filtered = useMemo(() => sortDrops(
-    displayDrops.filter(d => {
+    drops.filter(d => {
       if (filterIdf !== 'ALL' && d.idf !== filterIdf) return false;
       if (filterStatus === 'COMPLETE'   && !(d.roughPull && d.terminated && d.tested)) return false;
       if (filterStatus === 'INCOMPLETE' &&  (d.roughPull && d.terminated && d.tested)) return false;
@@ -76,7 +62,7 @@ export default function DropsScreen({ drops, idfList, addDrop, bulkAddDrops, upd
       }
       return true;
     })
-  ), [displayDrops, filterIdf, filterStatus, search]);
+  ), [drops, filterIdf, filterStatus, search]);
 
   return (
     <KeyboardAvoidingView

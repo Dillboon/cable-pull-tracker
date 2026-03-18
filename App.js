@@ -1,42 +1,16 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, SafeAreaView, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import ProjectsScreen  from './src/screens/ProjectsScreen';
 import DropsScreen     from './src/screens/DropsScreen';
-import PrintsScreen    from './src/screens/PrintsScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import SettingsScreen  from './src/screens/SettingsScreen';
 import TabBar          from './src/components/TabBar';
 import Toast           from './src/components/Toast';
 import { COLORS }      from './src/theme';
 import { emptyDrop }   from './src/utils';
-
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { error: null };
-  }
-  componentDidCatch(error) {
-    this.setState({ error: error.message });
-  }
-  render() {
-    if (this.state.error) {
-      return (
-        <View style={{ flex: 1, backgroundColor: '#0d1117', padding: 20, justifyContent: 'center' }}>
-          <Text style={{ color: '#f87171', fontSize: 14, fontWeight: '700', marginBottom: 10 }}>
-            Crash Error:
-          </Text>
-          <Text style={{ color: '#e2e8f0', fontSize: 12, fontFamily: 'monospace' }}>
-            {this.state.error}
-          </Text>
-        </View>
-      );
-    }
-    return this.props.children;
-  }
-}
 
 export default function App() {
   const [projects,       setProjectsState] = useState([]);
@@ -60,14 +34,9 @@ export default function App() {
   }, []);
 
   // ── Persist ───────────────────────────────────────────────────────────────
-  const persistTimer = useRef(null);
-
-  const persistProjects = useCallback((next) => {
-    if (persistTimer.current) clearTimeout(persistTimer.current);
-    persistTimer.current = setTimeout(async () => {
-      try { await AsyncStorage.setItem('cable-projects', JSON.stringify(next)); }
-      catch { showToast('Save failed', 'error'); }
-    }, 800);
+  const persistProjects = useCallback(async (next) => {
+    try { await AsyncStorage.setItem('cable-projects', JSON.stringify(next)); }
+    catch { showToast('Save failed', 'error'); }
   }, []);
 
   // ── Update projects list + keep activeProject in sync ─────────────────────
@@ -133,7 +102,7 @@ export default function App() {
 
   // ── Navigation ────────────────────────────────────────────────────────────
   const openProject = useCallback((project) => {
-    setActiveProject({ ...project, prints: project.prints || [] });
+    setActiveProject(project);
     setActiveTab('drops');
   }, []);
 
@@ -153,9 +122,9 @@ export default function App() {
   // ── Projects screen ───────────────────────────────────────────────────────
   if (!activeProject) {
     return (
-	  <ErrorBoundary>
-      <SafeAreaView style={st.root}>
-        <StatusBar style="light" backgroundColor={COLORS.surface} translucent={false} />
+    <ErrorBoundary>
+    <SafeAreaView style={st.root}>
+      <StatusBar style="light" backgroundColor={COLORS.surface} translucent={false} />
         <ProjectsScreen
           projects={projects}
           setProjects={setProjects}
@@ -163,27 +132,18 @@ export default function App() {
         />
         {toast && <Toast msg={toast.msg} type={toast.type} />}
       </SafeAreaView>
-	  <ErrorBoundary>
+	  </ErrorBoundary>
     );
   }
 
   // ── Inside a project ──────────────────────────────────────────────────────
-  const updatePrints = useCallback((next) => {
-    try {
-      updateActiveProject({ prints: next });
-    } catch(e) {
-      console.error('updatePrints error:', e);
-    }
-  }, [updateActiveProject]);
-
   const screenProps = {
     drops:        activeProject.drops,
     idfList:      activeProject.idfList,
-    prints:       activeProject.prints || [],
     project:      activeProject,
     addDrop, bulkAddDrops, updateDrop, deleteDrop,
     updateIdfs, clearAllDrops, showToast,
-    setProjects, projects, updatePrints,
+    setProjects, projects,
   };
 
   return (
@@ -209,14 +169,11 @@ export default function App() {
         )}
       </View>
 
-      <ErrorBoundary>
-        <View style={{ flex: 1 }}>
-          {activeTab === 'drops'     && <DropsScreen     {...screenProps} />}
-          {activeTab === 'dashboard' && <DashboardScreen {...screenProps} />}
-          {activeTab === 'prints'    && <PrintsScreen    {...screenProps} />}
-          {activeTab === 'settings'  && <SettingsScreen  {...screenProps} />}
-        </View>
-      </ErrorBoundary>
+      <View style={{ flex: 1 }}>
+        {activeTab === 'drops'     && <DropsScreen     {...screenProps} />}
+        {activeTab === 'dashboard' && <DashboardScreen {...screenProps} />}
+        {activeTab === 'settings'  && <SettingsScreen  {...screenProps} />}
+      </View>
 
       <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />
       {toast && <Toast msg={toast.msg} type={toast.type} />}
