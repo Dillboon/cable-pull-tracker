@@ -6,7 +6,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ProjectsScreen  from './src/screens/ProjectsScreen';
 import DropsScreen     from './src/screens/DropsScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
-import PrintsScreen    from './src/screens/PrintsScreen';
 import SettingsScreen  from './src/screens/SettingsScreen';
 import TabBar          from './src/components/TabBar';
 import Toast           from './src/components/Toast';
@@ -136,18 +135,13 @@ export default function App() {
   }
 
   // ── Inside a project ──────────────────────────────────────────────────────
-  const updatePrints = useCallback((next) => {
-    updateActiveProject({ prints: next });
-  }, [updateActiveProject]);
-
   const screenProps = {
     drops:        activeProject.drops,
     idfList:      activeProject.idfList,
-    prints:       activeProject.prints || [],
     project:      activeProject,
     addDrop, bulkAddDrops, updateDrop, deleteDrop,
     updateIdfs, clearAllDrops, showToast,
-    setProjects, projects, updatePrints,
+    setProjects, projects,
   };
 
   return (
@@ -176,7 +170,6 @@ export default function App() {
       <View style={{ flex: 1 }}>
         {activeTab === 'drops'     && <DropsScreen     {...screenProps} />}
         {activeTab === 'dashboard' && <DashboardScreen {...screenProps} />}
-		{activeTab === 'prints'    && <PrintsScreen    {...screenProps} />}
         {activeTab === 'settings'  && <SettingsScreen  {...screenProps} />}
       </View>
 

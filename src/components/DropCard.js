@@ -108,12 +108,14 @@ export default function DropCard({ drop, onUpdate, onDelete, idfList }) {
                 <Text style={s.idfPillText}>{drop.idf}</Text>
               </View>
             ) : null}
-            {STATUS_FIELDS.map(f => <Badge key={f.key} done={drop[f.key]} short={f.short} />)}
-            {drop.notes ? (
-              <View style={s.notePill}>
-                <Text style={s.notePillText}>📝</Text>
-              </View>
-            ) : null}
+            {STATUS_FIELDS.map(f => (
+              <Badge
+                key={f.key}
+                done={drop[f.key]}
+                short={f.short}
+                onPress={() => toggleField(f.key)}
+              />
+            ))}
           </View>
         </View>
 
@@ -269,17 +271,6 @@ const s = StyleSheet.create({
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 1,
-  },
-  notePill: {
-    backgroundColor: 'rgba(251,191,36,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(251,191,36,0.25)',
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-  },
-  notePillText: {
-    fontSize: 9,
   },
   idfPillText: {
     fontSize: 10, fontWeight: '600', color: COLORS.textSub, letterSpacing: 0.5,

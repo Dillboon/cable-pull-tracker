@@ -14,7 +14,6 @@ const emptyProject = (name) => ({
   createdAt: today(),
   drops:     [],
   idfList:   [...DEFAULT_IDFS],
-  prints:    [],
 });
 
 export default function ProjectsScreen({ projects, setProjects, onOpenProject }) {
