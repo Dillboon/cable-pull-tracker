@@ -153,6 +153,7 @@ export default function App() {
   // ── Projects screen ───────────────────────────────────────────────────────
   if (!activeProject) {
     return (
+	  <ErrorBoundary>
       <SafeAreaView style={st.root}>
         <StatusBar style="light" backgroundColor={COLORS.surface} translucent={false} />
         <ProjectsScreen
@@ -162,12 +163,17 @@ export default function App() {
         />
         {toast && <Toast msg={toast.msg} type={toast.type} />}
       </SafeAreaView>
+	  <ErrorBoundary>
     );
   }
 
   // ── Inside a project ──────────────────────────────────────────────────────
   const updatePrints = useCallback((next) => {
-    updateActiveProject({ prints: next });
+    try {
+      updateActiveProject({ prints: next });
+    } catch(e) {
+      console.error('updatePrints error:', e);
+    }
   }, [updateActiveProject]);
 
   const screenProps = {
