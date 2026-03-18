@@ -44,6 +44,7 @@ export default function DropsScreen({ drops, idfList, addDrop, bulkAddDrops, upd
   const [search,       setSearch]       = useState('');
   const [showBulk,     setShowBulk]     = useState(false);
 
+<<<<<<< HEAD
   // ── Debounced display drops ───────────────────────────────────────────────
   // Waits 1.5s after the last change before re-sorting, so cards don't
   // jump around while the user is actively typing a cable ID.
@@ -61,6 +62,11 @@ export default function DropsScreen({ drops, idfList, addDrop, bulkAddDrops, upd
   // ── Filter + sort ─────────────────────────────────────────────────────────
   const filtered = useMemo(() => sortDrops(
     displayDrops.filter(d => {
+=======
+  // ── Filter + sort ─────────────────────────────────────────────────────────
+  const filtered = useMemo(() => sortDrops(
+    drops.filter(d => {
+>>>>>>> 56471c6fa060d357d74c8d243d443aa84461e961
       if (filterIdf !== 'ALL' && d.idf !== filterIdf) return false;
       if (filterStatus === 'COMPLETE'   && !(d.roughPull && d.terminated && d.tested)) return false;
       if (filterStatus === 'INCOMPLETE' &&  (d.roughPull && d.terminated && d.tested)) return false;
@@ -76,7 +82,11 @@ export default function DropsScreen({ drops, idfList, addDrop, bulkAddDrops, upd
       }
       return true;
     })
+<<<<<<< HEAD
   ), [displayDrops, filterIdf, filterStatus, search]);
+=======
+  ), [drops, filterIdf, filterStatus, search]);
+>>>>>>> 56471c6fa060d357d74c8d243d443aa84461e961
 
   return (
     <KeyboardAvoidingView

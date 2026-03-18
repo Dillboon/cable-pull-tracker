@@ -122,8 +122,14 @@ export default function App() {
   // ── Projects screen ───────────────────────────────────────────────────────
   if (!activeProject) {
     return (
+<<<<<<< HEAD
       <SafeAreaView style={st.root}>
         <StatusBar style="light" backgroundColor={COLORS.surface} translucent={false} />
+=======
+    <ErrorBoundary>
+    <SafeAreaView style={st.root}>
+      <StatusBar style="light" backgroundColor={COLORS.surface} translucent={false} />
+>>>>>>> 56471c6fa060d357d74c8d243d443aa84461e961
         <ProjectsScreen
           projects={projects}
           setProjects={setProjects}
@@ -131,6 +137,10 @@ export default function App() {
         />
         {toast && <Toast msg={toast.msg} type={toast.type} />}
       </SafeAreaView>
+<<<<<<< HEAD
+=======
+	  </ErrorBoundary>
+>>>>>>> 56471c6fa060d357d74c8d243d443aa84461e961
     );
   }
 
