@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, SafeAreaView, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -35,9 +35,14 @@ export default function App() {
   }, []);
 
   // ── Persist ───────────────────────────────────────────────────────────────
-  const persistProjects = useCallback(async (next) => {
-    try { await AsyncStorage.setItem('cable-projects', JSON.stringify(next)); }
-    catch { showToast('Save failed', 'error'); }
+  const persistTimer = useRef(null);
+
+  const persistProjects = useCallback((next) => {
+    if (persistTimer.current) clearTimeout(persistTimer.current);
+    persistTimer.current = setTimeout(async () => {
+      try { await AsyncStorage.setItem('cable-projects', JSON.stringify(next)); }
+      catch { showToast('Save failed', 'error'); }
+    }, 800);
   }, []);
 
   // ── Update projects list + keep activeProject in sync ─────────────────────
@@ -103,7 +108,7 @@ export default function App() {
 
   // ── Navigation ────────────────────────────────────────────────────────────
   const openProject = useCallback((project) => {
-    setActiveProject(project);
+    setActiveProject({ ...project, prints: project.prints || [] });
     setActiveTab('drops');
   }, []);
 
