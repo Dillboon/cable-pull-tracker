@@ -13,6 +13,31 @@ import Toast           from './src/components/Toast';
 import { COLORS }      from './src/theme';
 import { emptyDrop }   from './src/utils';
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  componentDidCatch(error) {
+    this.setState({ error: error.message });
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <View style={{ flex: 1, backgroundColor: '#0d1117', padding: 20, justifyContent: 'center' }}>
+          <Text style={{ color: '#f87171', fontSize: 14, fontWeight: '700', marginBottom: 10 }}>
+            Crash Error:
+          </Text>
+          <Text style={{ color: '#e2e8f0', fontSize: 12, fontFamily: 'monospace' }}>
+            {this.state.error}
+          </Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   const [projects,       setProjectsState] = useState([]);
   const [activeProject,  setActiveProject] = useState(null);
@@ -178,12 +203,14 @@ export default function App() {
         )}
       </View>
 
-      <View style={{ flex: 1 }}>
-        {activeTab === 'drops'     && <DropsScreen     {...screenProps} />}
-        {activeTab === 'dashboard' && <DashboardScreen {...screenProps} />}
-		{activeTab === 'prints'    && <PrintsScreen    {...screenProps} />}
-        {activeTab === 'settings'  && <SettingsScreen  {...screenProps} />}
-      </View>
+      <ErrorBoundary>
+        <View style={{ flex: 1 }}>
+          {activeTab === 'drops'     && <DropsScreen     {...screenProps} />}
+          {activeTab === 'dashboard' && <DashboardScreen {...screenProps} />}
+          {activeTab === 'prints'    && <PrintsScreen    {...screenProps} />}
+          {activeTab === 'settings'  && <SettingsScreen  {...screenProps} />}
+        </View>
+      </ErrorBoundary>
 
       <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />
       {toast && <Toast msg={toast.msg} type={toast.type} />}
