@@ -122,9 +122,8 @@ export default function App() {
   // ── Projects screen ───────────────────────────────────────────────────────
   if (!activeProject) {
     return (
-    <ErrorBoundary>
-    <SafeAreaView style={st.root}>
-      <StatusBar style="light" backgroundColor={COLORS.surface} translucent={false} />
+      <SafeAreaView style={st.root}>
+        <StatusBar style="light" backgroundColor={COLORS.surface} translucent={false} />
         <ProjectsScreen
           projects={projects}
           setProjects={setProjects}
@@ -132,7 +131,6 @@ export default function App() {
         />
         {toast && <Toast msg={toast.msg} type={toast.type} />}
       </SafeAreaView>
-	  </ErrorBoundary>
     );
   }
 
